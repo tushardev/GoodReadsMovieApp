@@ -4,6 +4,8 @@ import com.movie.catalog.model.Movie;
 import com.movie.catalog.model.MovieDetails;
 import com.movie.catalog.model.MovieRatingDetails;
 import com.movie.catalog.model.UserRatingResponse;
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixProperty;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cloud.client.ServiceInstance;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -36,6 +39,8 @@ public class MovieCatalogController {
      * @return
      */
     @RequestMapping("/movie/catalog/discovery/{userId}")
+    @HystrixCommand(fallbackMethod = "getFallbackCatalog",
+    commandProperties = {@HystrixProperty(name = "execution.isolation.thread.timeoutInMilliseconds", value = "2000")})
     public List<Movie> getMovieCatalogUsingServiceDiscovery(@PathVariable("userId") String userId) {
 
         /* You can check what instances you have for service on Eureka */
@@ -51,9 +56,19 @@ public class MovieCatalogController {
 
         return movieRatings.stream().map(rating -> {
             MovieDetails movieDetails = restTemplate.getForObject("http://Movie-Info-Service-App/movie/info/" + rating.getMovieId(), MovieDetails.class);
-            return  new Movie(movieDetails.getName(), "Dark Knight", rating.getMovieRating());
+            return  new Movie(movieDetails.getName(), movieDetails.getMovieDesc(), rating.getMovieRating());
         }).collect(Collectors.toList());
     }
+
+    /****
+     * This is the fallback method for above method. If circuit is broken by above method - it will execute this method.
+     * @param userId
+     * @return
+     */
+    public List<Movie> getFallbackCatalog(@PathVariable("userId") String userId) {
+        return Arrays.asList(new Movie("No Movie","", 0));
+    }
+
 
     /****
      * This method uses REST calls with URLs hardcoded. Here we are using Normal Rest Template and Giving actual URL for REST call.
