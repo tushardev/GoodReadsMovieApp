@@ -31,8 +31,8 @@ public class MovieRatingController {
         UserRatingResponse response = new UserRatingResponse();
 
         List<MovieRatingDetails> ratingDetails = Arrays.asList(
-                new MovieRatingDetails(1, 8),
-                new MovieRatingDetails(2, 9)
+                new MovieRatingDetails(100, 8),
+                new MovieRatingDetails(200, 9)
         );
 
         response.setUserRatingDetails(ratingDetails);
